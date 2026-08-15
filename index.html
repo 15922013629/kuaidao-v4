@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#111827" />
+<link rel="manifest" href="manifest.webmanifest" />
+<title>隔夜快刀 V4</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#0f9d58;--bad:#d93025;--accent:#111827}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+.app{max-width:720px;margin:0 auto;padding:env(safe-area-inset-top) 14px calc(88px + env(safe-area-inset-bottom))}
+header{padding:18px 2px 10px}.title{font-size:25px;font-weight:800}.sub{font-size:13px;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 2px 10px rgba(0,0,0,.035)}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{padding:12px;border:1px solid var(--line);border-radius:14px}.kpi b{font-size:20px}.kpi small{display:block;color:var(--muted);margin-top:4px}
+button,.btn{appearance:none;border:0;border-radius:14px;padding:13px 15px;font-weight:700;font-size:15px;background:var(--accent);color:white;width:100%}
+button.secondary{background:#eef0f4;color:#111827} input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:16px;background:white}
+label{font-size:13px;color:var(--muted);display:block;margin:10px 0 6px}.pill{display:inline-block;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;background:#eef0f4}.good{color:var(--good)}.bad{color:var(--bad)}
+.stock{padding:13px 0;border-top:1px solid var(--line)}.stock:first-child{border-top:0}.stock h3{margin:0 0 6px;font-size:17px}.meta{font-size:13px;color:var(--muted);line-height:1.65}.score{font-size:24px;font-weight:800}
+nav{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));display:flex;justify-content:center}
+nav .wrap{max-width:720px;width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}nav button{background:transparent;color:var(--muted);font-size:12px;padding:8px 4px}nav button.active{color:#111827;background:#f0f1f4}
+.hidden{display:none}.hint{font-size:12px;line-height:1.6;color:var(--muted)} table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:right;padding:8px 4px;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}.danger{background:#fff1f0;border-color:#ffd7d2}.success{background:#eefaf3;border-color:#ccebd9}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="title">隔夜快刀 V4</div><div class="sub">纯手机研究版 · 本地计算 · 不依赖 NAS / Python</div></header>
+
+<section id="today" class="page">
+  <div class="card">
+    <div class="row"><div><b>今日市场闸门</b><div class="hint">先判断今天是否值得做强势股隔夜</div></div><span id="gatePill" class="pill">未计算</span></div>
+    <div class="grid" style="margin-top:12px"><div class="kpi"><b id="upRatio">--</b><small>上涨股票占比</small></div><div class="kpi"><b id="avgPct">--</b><small>市场平均涨幅</small></div></div>
+  </div>
+  <div class="card">
+    <b>获取今日行情</b>
+    <p class="hint">V4支持两种模式：① 尝试手机直连公开行情接口；② 导入CSV。由于公开网页接口可能调整或限制跨域，CSV导入是稳定兜底。</p>
+    <button id="liveBtn">尝试在线获取</button>
+    <input id="csvInput" type="file" accept=".csv,text/csv" style="margin-top:10px" />
+    <button id="demoBtn" class="secondary" style="margin-top:10px">载入演示数据</button>
+    <div id="sourceMsg" class="hint" style="margin-top:10px"></div>
+  </div>
+  <div class="card"><div class="row"><b>候选股票</b><span id="countPill" class="pill">0只</span></div><div id="stockList"><p class="hint">获取或导入行情后自动筛选。</p></div></div>
+</section>
+
+<section id="backtest" class="page hidden">
+  <div class="card"><b>手机本地回测</b><p class="hint">导入V3格式的5分钟交易明细CSV后，本地计算胜率、平均收益、盈亏比、最大回撤。不会上传文件。</p><input id="tradeCsv" type="file" accept=".csv,text/csv" /></div>
+  <div class="card"><div class="grid"><div class="kpi"><b id="btN">--</b><small>交易次数</small></div><div class="kpi"><b id="btWin">--</b><small>胜率</small></div><div class="kpi"><b id="btAvg">--</b><small>平均净收益</small></div><div class="kpi"><b id="btDD">--</b><small>最大回撤</small></div></div><div id="yearTable" style="overflow:auto;margin-top:10px"></div></div>
+</section>
+
+<section id="records" class="page hidden">
+  <div class="card"><b>交易记录</b><p class="hint">记录你实际执行的买卖，数据只存在当前手机浏览器。</p><div class="grid"><div><label>股票代码</label><input id="recCode" placeholder="600000"></div><div><label>股票名称</label><input id="recName" placeholder="浦发银行"></div></div><div class="grid"><div><label>买入价</label><input id="recBuy" inputmode="decimal"></div><div><label>卖出价</label><input id="recSell" inputmode="decimal"></div></div><label>日期</label><input id="recDate" type="date"><button id="saveRec" style="margin-top:12px">保存记录</button></div>
+  <div class="card"><div id="recordList" class="hint">暂无记录</div></div>
+</section>
+
+<section id="settings" class="page hidden">
+  <div class="card"><b>V4 筛选参数</b>
+    <div class="grid"><div><label>涨幅下限 %</label><input id="pMin" type="number" step="0.1"></div><div><label>涨幅上限 %</label><input id="pMax" type="number" step="0.1"></div></div>
+    <div class="grid"><div><label>换手下限 %</label><input id="tMin" type="number" step="0.1"></div><div><label>换手上限 %</label><input id="tMax" type="number" step="0.1"></div></div>
+    <div class="grid"><div><label>量比下限</label><input id="volMin" type="number" step="0.1"></div><div><label>最多候选</label><input id="maxN" type="number" step="1"></div></div>
+    <div class="grid"><div><label>上涨家数闸门 %</label><input id="gateUp" type="number" step="1"></div><div><label>市场平均涨幅闸门 %</label><input id="gateAvg" type="number" step="0.1"></div></div>
+    <button id="saveSettings" style="margin-top:12px">保存参数</button><button id="resetSettings" class="secondary" style="margin-top:10px">恢复V3默认</button>
+  </div>
+  <div class="card danger"><b>研究提示</b><p class="hint">V4只是筛选与回测工具，不代表策略已被证明长期有效。上一轮日线代理回测显示，该策略对市场阶段非常敏感，因此默认保留市场环境闸门。</p></div>
+  <div class="card"><b>CSV字段</b><p class="hint">今日筛选CSV建议包含：code,name,price,pct,turnover,volume_ratio,market_cap,ma5,ma10,ma20,ma60,ma60_prev,dist_high,vwap。最少需要 code,name,price,pct,turnover,volume_ratio；缺少趋势/VWAP字段时会降低评分而不是伪造通过。</p></div>
+</section>
+</div>
+<nav><div class="wrap"><button data-page="today" class="active">今日</button><button data-page="backtest">回测</button><button data-page="records">记录</button><button data-page="settings">设置</button></div></nav>
+<script>
+const DEF={pMin:3,pMax:5,tMin:2,tMax:15,volMin:1.2,maxN:3,gateUp:50,gateAvg:0.5};
+let S=JSON.parse(localStorage.getItem('v4settings')||'null')||{...DEF};
+const $=id=>document.getElementById(id);
+function saveS(){localStorage.setItem('v4settings',JSON.stringify(S))}
+function pct(v){return Number.isFinite(v)?v.toFixed(2)+'%':'--'}
+function n(v){const x=Number(String(v??'').replace('%','').replace(',',''));return Number.isFinite(x)?x:NaN}
+function parseCSV(text){const lines=text.replace(/^\uFEFF/,'').trim().split(/\r?\n/); if(lines.length<2)return[]; const h=lines[0].split(',').map(x=>x.trim().toLowerCase()); return lines.slice(1).map(line=>{let a=[],cur='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){q=!q}else if(c===','&&!q){a.push(cur);cur=''}else cur+=c}a.push(cur);let o={};h.forEach((k,i)=>o[k]=(a[i]||'').trim());return o})}
+function normalize(o){return {code:o.code||o.symbol||o.f12||'',name:o.name||o.f14||'',price:n(o.price??o.close??o.f2),pct:n(o.pct??o.change_pct??o.f3),turnover:n(o.turnover??o.turnover_rate??o.f8),volume_ratio:n(o.volume_ratio??o.vol_ratio??o.f10),market_cap:n(o.market_cap??o.f20)/((o.f20&&!o.market_cap)?1e8:1),ma5:n(o.ma5),ma10:n(o.ma10),ma20:n(o.ma20),ma60:n(o.ma60),ma60_prev:n(o.ma60_prev),dist_high:n(o.dist_high),vwap:n(o.vwap)}}
+function evaluate(rows){rows=rows.map(normalize).filter(x=>x.code&&Number.isFinite(x.pct)); const up=rows.filter(x=>x.pct>0).length/Math.max(rows.length,1)*100; const avg=rows.reduce((s,x)=>s+(Number.isFinite(x.pct)?x.pct:0),0)/Math.max(rows.length,1); $('upRatio').textContent=pct(up);$('avgPct').textContent=pct(avg); const gate=up>=S.gateUp&&avg>=S.gateAvg; $('gatePill').textContent=gate?'允许交易':'不建议交易';$('gatePill').className='pill '+(gate?'good':'bad'); let out=[]; for(const x of rows){let score=0,why=[]; if(x.pct>=S.pMin&&x.pct<=S.pMax){score+=25;why.push('涨幅')} if(x.turnover>=S.tMin&&x.turnover<=S.tMax){score+=15;why.push('换手')} if(x.volume_ratio>=S.volMin){score+=15;why.push('量比')} if([x.ma5,x.ma10,x.ma20].every(Number.isFinite)&&x.ma5>x.ma10&&x.ma10>x.ma20){score+=15;why.push('均线')} if(Number.isFinite(x.ma60)&&Number.isFinite(x.ma60_prev)&&x.ma60>x.ma60_prev){score+=10;why.push('60日向上')} if(Number.isFinite(x.dist_high)&&x.dist_high<=2){score+=10;why.push('近高点')} if(Number.isFinite(x.vwap)&&Number.isFinite(x.price)&&x.price>=x.vwap){score+=10;why.push('VWAP')} if(score>=55)out.push({...x,score,why})}
+ out.sort((a,b)=>b.score-a.score||b.pct-a.pct); if(!gate)out=out.map(x=>({...x,watch:true})); out=out.slice(0,S.maxN); renderStocks(out,gate); return out}
+function renderStocks(arr,gate){$('countPill').textContent=arr.length+'只'; if(!arr.length){$('stockList').innerHTML='<p class="hint">没有达到当前阈值的候选。</p>';return} $('stockList').innerHTML=arr.map(x=>`<div class="stock"><div class="row"><h3>${x.name||'--'} <span class="hint">${x.code}</span></h3><div class="score">${x.score}</div></div><div class="meta">涨幅 ${pct(x.pct)} · 换手 ${pct(x.turnover)} · 量比 ${Number.isFinite(x.volume_ratio)?x.volume_ratio.toFixed(2):'--'}<br>命中：${x.why.join(' / ')}<br><b class="${gate?'good':'bad'}">${gate?'候选':'仅观察，市场闸门未通过'}</b></div></div>`).join('')}
+function jsonp(url,timeout=10000){return new Promise((res,rej)=>{const cb='v4cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);window[cb]=d=>{cleanup();res(d)};const s=document.createElement('script');const cleanup=()=>{delete window[cb];s.remove();clearTimeout(t)};s.onerror=()=>{cleanup();rej(new Error('接口访问失败'))};s.src=url+(url.includes('?')?'&':'?')+'cb='+cb;document.body.appendChild(s);const t=setTimeout(()=>{cleanup();rej(new Error('接口超时'))},timeout)})}
+async function fetchLive(){ $('sourceMsg').textContent='正在尝试获取公开行情…'; try{let all=[]; for(let pn=1;pn<=30;pn++){const base='https://82.push2.eastmoney.com/api/qt/clist/get?pn='+pn+'&pz=200&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f14,f2,f3,f8,f10,f20'; const d=await jsonp(base,8000); const diff=d&&d.data&&d.data.diff?d.data.diff:[]; all=all.concat(diff); if(diff.length<200)break;} if(!all.length)throw new Error('未返回行情'); $('sourceMsg').textContent='已获取 '+all.length+' 只股票。公开接口字段有限，趋势类条件会降低权重。'; evaluate(all)}catch(e){$('sourceMsg').textContent='在线获取失败：'+e.message+'。请使用CSV导入；这通常是接口调整、网络或浏览器限制，不是程序计算故障。'}}
+$('liveBtn').onclick=fetchLive;
+$('demoBtn').onclick=()=>{const demo=[{code:'600001',name:'演示A',price:12.5,pct:3.8,turnover:6.8,volume_ratio:1.6,ma5:12,ma10:11.7,ma20:11.2,ma60:10.8,ma60_prev:10.7,dist_high:0.8,vwap:12.2},{code:'000002',name:'演示B',price:9.3,pct:4.4,turnover:9.1,volume_ratio:1.4,ma5:9.0,ma10:8.8,ma20:8.5,ma60:8.2,ma60_prev:8.15,dist_high:1.3,vwap:9.1},{code:'300003',name:'演示C',price:20,pct:-1.2,turnover:2,volume_ratio:.8}];$('sourceMsg').textContent='演示数据仅用于检查界面和计算逻辑。';evaluate(demo)}
+$('csvInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;const rows=parseCSV(await f.text());$('sourceMsg').textContent='已从手机本地导入 '+rows.length+' 行CSV。';evaluate(rows)}
+function bt(rows){const R=rows.map(o=>{const date=o.date||o.buy_date||o.trade_date||''; let r=n(o.net_return??o.return??o.ret??o.pnl_pct); if(Number.isFinite(r)&&Math.abs(r)<1)r*=100; return {date,r}}).filter(x=>Number.isFinite(x.r)); if(!R.length)return; const win=R.filter(x=>x.r>0).length/R.length*100,avg=R.reduce((s,x)=>s+x.r,0)/R.length;let eq=1,peak=1,dd=0;const ys={};for(const x of R){eq*=1+x.r/100;peak=Math.max(peak,eq);dd=Math.min(dd,(eq/peak-1)*100);const y=(x.date||'未知').slice(0,4);(ys[y]??=[]).push(x.r)}$('btN').textContent=R.length;$('btWin').textContent=pct(win);$('btAvg').textContent=pct(avg);$('btDD').textContent=pct(dd);$('yearTable').innerHTML='<table><tr><th>年份</th><th>次数</th><th>胜率</th><th>平均</th></tr>'+Object.entries(ys).sort().map(([y,a])=>`<tr><td>${y}</td><td>${a.length}</td><td>${pct(a.filter(v=>v>0).length/a.length*100)}</td><td>${pct(a.reduce((s,v)=>s+v,0)/a.length)}</td></tr>`).join('')+'</table>'}
+$('tradeCsv').onchange=async e=>{const f=e.target.files[0];if(f)bt(parseCSV(await f.text()))}
+function loadSettings(){for(const k of Object.keys(DEF))$(k).value=S[k]}
+$('saveSettings').onclick=()=>{for(const k of Object.keys(DEF))S[k]=Number($(k).value);saveS();alert('参数已保存到本机')};$('resetSettings').onclick=()=>{S={...DEF};saveS();loadSettings()};loadSettings();
+function records(){return JSON.parse(localStorage.getItem('v4records')||'[]')}function renderRecords(){const a=records();$('recordList').innerHTML=a.length?a.map((r,i)=>`<div class="stock"><b>${r.name||r.code}</b> ${r.date}<div class="meta">买 ${r.buy} · 卖 ${r.sell} · 收益 <b class="${r.ret>=0?'good':'bad'}">${pct(r.ret)}</b></div><button class="secondary" onclick="delRec(${i})" style="margin-top:8px;padding:8px">删除</button></div>`).join(''):'暂无记录'}window.delRec=i=>{const a=records();a.splice(i,1);localStorage.setItem('v4records',JSON.stringify(a));renderRecords()};$('saveRec').onclick=()=>{const buy=n($('recBuy').value),sell=n($('recSell').value);if(!Number.isFinite(buy)||!Number.isFinite(sell)||buy<=0)return alert('请填写正确买卖价格');const a=records();a.unshift({code:$('recCode').value,name:$('recName').value,buy,sell,date:$('recDate').value,ret:(sell/buy-1)*100});localStorage.setItem('v4records',JSON.stringify(a));renderRecords()};$('recDate').value=new Date().toISOString().slice(0,10);renderRecords();
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));$(b.dataset.page).classList.remove('hidden');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active')});
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body></html>
