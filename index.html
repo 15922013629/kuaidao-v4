@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#111827" />
 <link rel="manifest" href="manifest.webmanifest" />
-<title>隔夜快刀 V4</title>
+<title>隔夜快刀 V4.1</title>
 <style>
 :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--good:#0f9d58;--bad:#d93025;--accent:#111827}
 *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
@@ -25,7 +25,7 @@ nav .wrap{max-width:720px;width:100%;display:grid;grid-template-columns:repeat(4
 </head>
 <body>
 <div class="app">
-<header><div class="title">隔夜快刀 V4</div><div class="sub">纯手机研究版 · 本地计算 · 不依赖 NAS / Python</div></header>
+<header><div class="title">隔夜快刀 V4.1</div><div class="sub">纯手机研究版 · 本地计算 · 不依赖 NAS / Python</div></header>
 
 <section id="today" class="page">
   <div class="card">
@@ -34,7 +34,7 @@ nav .wrap{max-width:720px;width:100%;display:grid;grid-template-columns:repeat(4
   </div>
   <div class="card">
     <b>获取今日行情</b>
-    <p class="hint">V4支持两种模式：① 尝试手机直连公开行情接口；② 导入CSV。由于公开网页接口可能调整或限制跨域，CSV导入是稳定兜底。</p>
+    <p class="hint">V4.1支持两种模式：① 尝试手机直连公开行情接口；② 导入CSV。由于公开网页接口可能调整或限制跨域，CSV导入是稳定兜底。</p>
     <button id="liveBtn">尝试在线获取</button>
     <input id="csvInput" type="file" accept=".csv,text/csv" style="margin-top:10px" />
     <button id="demoBtn" class="secondary" style="margin-top:10px">载入演示数据</button>
@@ -68,18 +68,62 @@ nav .wrap{max-width:720px;width:100%;display:grid;grid-template-columns:repeat(4
 <nav><div class="wrap"><button data-page="today" class="active">今日</button><button data-page="backtest">回测</button><button data-page="records">记录</button><button data-page="settings">设置</button></div></nav>
 <script>
 const DEF={pMin:3,pMax:5,tMin:2,tMax:15,volMin:1.2,maxN:3,gateUp:50,gateAvg:0.5};
-let S=JSON.parse(localStorage.getItem('v4settings')||'null')||{...DEF};
+let S=JSON.parse(localStorage.getItem('v41settings')||'null')||{...DEF};
 const $=id=>document.getElementById(id);
-function saveS(){localStorage.setItem('v4settings',JSON.stringify(S))}
+function saveS(){localStorage.setItem('v41settings',JSON.stringify(S))}
 function pct(v){return Number.isFinite(v)?v.toFixed(2)+'%':'--'}
 function n(v){const x=Number(String(v??'').replace('%','').replace(',',''));return Number.isFinite(x)?x:NaN}
 function parseCSV(text){const lines=text.replace(/^\uFEFF/,'').trim().split(/\r?\n/); if(lines.length<2)return[]; const h=lines[0].split(',').map(x=>x.trim().toLowerCase()); return lines.slice(1).map(line=>{let a=[],cur='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){q=!q}else if(c===','&&!q){a.push(cur);cur=''}else cur+=c}a.push(cur);let o={};h.forEach((k,i)=>o[k]=(a[i]||'').trim());return o})}
 function normalize(o){return {code:o.code||o.symbol||o.f12||'',name:o.name||o.f14||'',price:n(o.price??o.close??o.f2),pct:n(o.pct??o.change_pct??o.f3),turnover:n(o.turnover??o.turnover_rate??o.f8),volume_ratio:n(o.volume_ratio??o.vol_ratio??o.f10),market_cap:n(o.market_cap??o.f20)/((o.f20&&!o.market_cap)?1e8:1),ma5:n(o.ma5),ma10:n(o.ma10),ma20:n(o.ma20),ma60:n(o.ma60),ma60_prev:n(o.ma60_prev),dist_high:n(o.dist_high),vwap:n(o.vwap)}}
-function evaluate(rows){rows=rows.map(normalize).filter(x=>x.code&&Number.isFinite(x.pct)); const up=rows.filter(x=>x.pct>0).length/Math.max(rows.length,1)*100; const avg=rows.reduce((s,x)=>s+(Number.isFinite(x.pct)?x.pct:0),0)/Math.max(rows.length,1); $('upRatio').textContent=pct(up);$('avgPct').textContent=pct(avg); const gate=up>=S.gateUp&&avg>=S.gateAvg; $('gatePill').textContent=gate?'允许交易':'不建议交易';$('gatePill').className='pill '+(gate?'good':'bad'); let out=[]; for(const x of rows){let score=0,why=[]; if(x.pct>=S.pMin&&x.pct<=S.pMax){score+=25;why.push('涨幅')} if(x.turnover>=S.tMin&&x.turnover<=S.tMax){score+=15;why.push('换手')} if(x.volume_ratio>=S.volMin){score+=15;why.push('量比')} if([x.ma5,x.ma10,x.ma20].every(Number.isFinite)&&x.ma5>x.ma10&&x.ma10>x.ma20){score+=15;why.push('均线')} if(Number.isFinite(x.ma60)&&Number.isFinite(x.ma60_prev)&&x.ma60>x.ma60_prev){score+=10;why.push('60日向上')} if(Number.isFinite(x.dist_high)&&x.dist_high<=2){score+=10;why.push('近高点')} if(Number.isFinite(x.vwap)&&Number.isFinite(x.price)&&x.price>=x.vwap){score+=10;why.push('VWAP')} if(score>=55)out.push({...x,score,why})}
+function evaluate(rows, quality={ok:true,reason:''}){rows=rows.map(normalize).filter(x=>x.code&&Number.isFinite(x.pct)); const up=rows.filter(x=>x.pct>0).length/Math.max(rows.length,1)*100; const avg=rows.reduce((s,x)=>s+x.pct,0)/Math.max(rows.length,1); $('upRatio').textContent=pct(up);$('avgPct').textContent=pct(avg); const gate=quality.ok&&up>=S.gateUp&&avg>=S.gateAvg; $('gatePill').textContent=!quality.ok?'行情异常':(gate?'允许交易':'不建议交易');$('gatePill').className='pill '+(gate?'good':'bad'); let out=[]; if(!quality.ok){renderStocks([],false);return []} for(const x of rows){let score=0,why=[]; if(x.pct>=S.pMin&&x.pct<=S.pMax){score+=25;why.push('涨幅')} if(x.turnover>=S.tMin&&x.turnover<=S.tMax){score+=15;why.push('换手')} if(x.volume_ratio>=S.volMin){score+=15;why.push('量比')} if([x.ma5,x.ma10,x.ma20].every(Number.isFinite)&&x.ma5>x.ma10&&x.ma10>x.ma20){score+=15;why.push('均线')} if(Number.isFinite(x.ma60)&&Number.isFinite(x.ma60_prev)&&x.ma60>x.ma60_prev){score+=10;why.push('60日向上')} if(Number.isFinite(x.dist_high)&&x.dist_high<=2){score+=10;why.push('近高点')} if(Number.isFinite(x.vwap)&&Number.isFinite(x.price)&&x.price>=x.vwap){score+=10;why.push('VWAP')} if(score>=55)out.push({...x,score,why})}
  out.sort((a,b)=>b.score-a.score||b.pct-a.pct); if(!gate)out=out.map(x=>({...x,watch:true})); out=out.slice(0,S.maxN); renderStocks(out,gate); return out}
 function renderStocks(arr,gate){$('countPill').textContent=arr.length+'只'; if(!arr.length){$('stockList').innerHTML='<p class="hint">没有达到当前阈值的候选。</p>';return} $('stockList').innerHTML=arr.map(x=>`<div class="stock"><div class="row"><h3>${x.name||'--'} <span class="hint">${x.code}</span></h3><div class="score">${x.score}</div></div><div class="meta">涨幅 ${pct(x.pct)} · 换手 ${pct(x.turnover)} · 量比 ${Number.isFinite(x.volume_ratio)?x.volume_ratio.toFixed(2):'--'}<br>命中：${x.why.join(' / ')}<br><b class="${gate?'good':'bad'}">${gate?'候选':'仅观察，市场闸门未通过'}</b></div></div>`).join('')}
 function jsonp(url,timeout=10000){return new Promise((res,rej)=>{const cb='v4cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);window[cb]=d=>{cleanup();res(d)};const s=document.createElement('script');const cleanup=()=>{delete window[cb];s.remove();clearTimeout(t)};s.onerror=()=>{cleanup();rej(new Error('接口访问失败'))};s.src=url+(url.includes('?')?'&':'?')+'cb='+cb;document.body.appendChild(s);const t=setTimeout(()=>{cleanup();rej(new Error('接口超时'))},timeout)})}
-async function fetchLive(){ $('sourceMsg').textContent='正在尝试获取公开行情…'; try{let all=[]; for(let pn=1;pn<=30;pn++){const base='https://82.push2.eastmoney.com/api/qt/clist/get?pn='+pn+'&pz=200&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f14,f2,f3,f8,f10,f20'; const d=await jsonp(base,8000); const diff=d&&d.data&&d.data.diff?d.data.diff:[]; all=all.concat(diff); if(diff.length<200)break;} if(!all.length)throw new Error('未返回行情'); $('sourceMsg').textContent='已获取 '+all.length+' 只股票。公开接口字段有限，趋势类条件会降低权重。'; evaluate(all)}catch(e){$('sourceMsg').textContent='在线获取失败：'+e.message+'。请使用CSV导入；这通常是接口调整、网络或浏览器限制，不是程序计算故障。'}}
+async function fetchLive(){
+ $('sourceMsg').textContent='正在分页获取沪深A股实时横截面…';
+ $('gatePill').textContent='获取中'; $('gatePill').className='pill';
+ try{
+   const map=new Map(); let total=0, pages=0;
+   for(let pn=1;pn<=70;pn++){
+     const base='https://82.push2.eastmoney.com/api/qt/clist/get?pn='+pn+'&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f14,f2,f3,f8,f10,f20';
+     const d=await jsonp(base,10000);
+     const data=d&&d.data?d.data:null, diff=data&&Array.isArray(data.diff)?data.diff:[];
+     if(data&&Number.isFinite(Number(data.total))) total=Number(data.total);
+     if(!diff.length)break;
+     pages++;
+     for(const x of diff){
+       const code=String(x.f12||'').trim(), name=String(x.f14||'').trim();
+       if(!code || /ST|退/.test(name)) continue;
+       if(!/^(60|68|00|30)/.test(code)) continue;
+       map.set(code,x);
+     }
+     if(total && pn*100>=total)break;
+   }
+   let all=[...map.values()];
+   const norm=all.map(normalize).filter(x=>Number.isFinite(x.pct)&&Number.isFinite(x.price)&&x.price>0);
+   const avg=norm.reduce((s,x)=>s+x.pct,0)/Math.max(norm.length,1);
+   const extreme=norm.filter(x=>Math.abs(x.pct)>30).length;
+   const quality={
+     ok:norm.length>=2000 && (!total || map.size>=Math.min(2000,total*0.55)) && Math.abs(avg)<=8 && extreme<=Math.max(10,norm.length*0.01),
+     reason:''
+   };
+   if(norm.length<2000) quality.reason='有效股票仅 '+norm.length+' 只，样本不足';
+   else if(Math.abs(avg)>8) quality.reason='市场平均涨幅异常：'+avg.toFixed(2)+'%';
+   else if(extreme>Math.max(10,norm.length*0.01)) quality.reason='异常涨跌幅记录过多';
+   else if(total && map.size<Math.min(2000,total*0.55)) quality.reason='分页数据不完整';
+   const ts=new Date().toLocaleString('zh-CN',{hour12:false});
+   if(!quality.ok){
+     $('sourceMsg').textContent='数据质量检查失败：'+quality.reason+'。已强制禁止交易。获取 '+norm.length+' 只有效股票 / '+pages+' 页；'+ts;
+     evaluate(norm,quality); return;
+   }
+   $('sourceMsg').textContent='数据质量正常 ✓ 已获取 '+norm.length+' 只沪深A股（已排除ST/退市标记），共 '+pages+' 页。行情时间：'+ts+'。公开接口不含MA/VWAP，趋势项不会伪造通过。';
+   evaluate(norm,quality);
+ }catch(e){
+   $('gatePill').textContent='行情异常';$('gatePill').className='pill bad';
+   $('upRatio').textContent='--';$('avgPct').textContent='--';renderStocks([],false);
+   $('sourceMsg').textContent='在线获取失败：'+e.message+'。已强制禁止交易，请稍后重试或使用CSV导入。';
+ }
+}
 $('liveBtn').onclick=fetchLive;
 $('demoBtn').onclick=()=>{const demo=[{code:'600001',name:'演示A',price:12.5,pct:3.8,turnover:6.8,volume_ratio:1.6,ma5:12,ma10:11.7,ma20:11.2,ma60:10.8,ma60_prev:10.7,dist_high:0.8,vwap:12.2},{code:'000002',name:'演示B',price:9.3,pct:4.4,turnover:9.1,volume_ratio:1.4,ma5:9.0,ma10:8.8,ma20:8.5,ma60:8.2,ma60_prev:8.15,dist_high:1.3,vwap:9.1},{code:'300003',name:'演示C',price:20,pct:-1.2,turnover:2,volume_ratio:.8}];$('sourceMsg').textContent='演示数据仅用于检查界面和计算逻辑。';evaluate(demo)}
 $('csvInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;const rows=parseCSV(await f.text());$('sourceMsg').textContent='已从手机本地导入 '+rows.length+' 行CSV。';evaluate(rows)}
@@ -87,7 +131,7 @@ function bt(rows){const R=rows.map(o=>{const date=o.date||o.buy_date||o.trade_da
 $('tradeCsv').onchange=async e=>{const f=e.target.files[0];if(f)bt(parseCSV(await f.text()))}
 function loadSettings(){for(const k of Object.keys(DEF))$(k).value=S[k]}
 $('saveSettings').onclick=()=>{for(const k of Object.keys(DEF))S[k]=Number($(k).value);saveS();alert('参数已保存到本机')};$('resetSettings').onclick=()=>{S={...DEF};saveS();loadSettings()};loadSettings();
-function records(){return JSON.parse(localStorage.getItem('v4records')||'[]')}function renderRecords(){const a=records();$('recordList').innerHTML=a.length?a.map((r,i)=>`<div class="stock"><b>${r.name||r.code}</b> ${r.date}<div class="meta">买 ${r.buy} · 卖 ${r.sell} · 收益 <b class="${r.ret>=0?'good':'bad'}">${pct(r.ret)}</b></div><button class="secondary" onclick="delRec(${i})" style="margin-top:8px;padding:8px">删除</button></div>`).join(''):'暂无记录'}window.delRec=i=>{const a=records();a.splice(i,1);localStorage.setItem('v4records',JSON.stringify(a));renderRecords()};$('saveRec').onclick=()=>{const buy=n($('recBuy').value),sell=n($('recSell').value);if(!Number.isFinite(buy)||!Number.isFinite(sell)||buy<=0)return alert('请填写正确买卖价格');const a=records();a.unshift({code:$('recCode').value,name:$('recName').value,buy,sell,date:$('recDate').value,ret:(sell/buy-1)*100});localStorage.setItem('v4records',JSON.stringify(a));renderRecords()};$('recDate').value=new Date().toISOString().slice(0,10);renderRecords();
+function records(){return JSON.parse(localStorage.getItem('v41records')||'[]')}function renderRecords(){const a=records();$('recordList').innerHTML=a.length?a.map((r,i)=>`<div class="stock"><b>${r.name||r.code}</b> ${r.date}<div class="meta">买 ${r.buy} · 卖 ${r.sell} · 收益 <b class="${r.ret>=0?'good':'bad'}">${pct(r.ret)}</b></div><button class="secondary" onclick="delRec(${i})" style="margin-top:8px;padding:8px">删除</button></div>`).join(''):'暂无记录'}window.delRec=i=>{const a=records();a.splice(i,1);localStorage.setItem('v41records',JSON.stringify(a));renderRecords()};$('saveRec').onclick=()=>{const buy=n($('recBuy').value),sell=n($('recSell').value);if(!Number.isFinite(buy)||!Number.isFinite(sell)||buy<=0)return alert('请填写正确买卖价格');const a=records();a.unshift({code:$('recCode').value,name:$('recName').value,buy,sell,date:$('recDate').value,ret:(sell/buy-1)*100});localStorage.setItem('v41records',JSON.stringify(a));renderRecords()};$('recDate').value=new Date().toISOString().slice(0,10);renderRecords();
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));$(b.dataset.page).classList.remove('hidden');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active')});
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
